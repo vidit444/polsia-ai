@@ -13,14 +13,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(self, app):
         super().__init__(app)
         settings = get_settings()
-        self.limit = settings.rate_limit_requests
-        self.window = settings.rate_limit_window_seconds
+        self.limit = settings.rate_limit_per_minute
+        self.window = 60
         self._bucket: dict[str, deque[float]] = defaultdict(deque)
         self._lock = asyncio.Lock()
 
     async def dispatch(self, request: Request, call_next):
         client = request.client.host if request.client else "unknown"
-        tenant = request.headers.get("X-Tenant-Id", "public")
+        tenant = request.headers.get("X-Tenant-ID", "public")
         principal = request.headers.get("Authorization", "anonymous")[:64]
         key = f"{tenant}:{principal}:{client}"
         now = time.monotonic()

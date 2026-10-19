@@ -9,6 +9,7 @@ from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.core.rate_limit import limiter
+from app.middleware import register_middleware
 
 
 settings = get_settings()
@@ -17,12 +18,13 @@ configure_logging(settings.log_level)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    get_settings()
     yield
 
 
 app = FastAPI(
     title=settings.app_name,
-    version="1.0.0",
+    version=settings.app_version,
     docs_url="/docs" if settings.enable_docs else None,
     redoc_url="/redoc" if settings.enable_docs else None,
     openapi_url="/openapi.json" if settings.enable_docs else None,
@@ -31,6 +33,7 @@ app = FastAPI(
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+register_middleware(app)
 app.include_router(api_router, prefix=settings.api_v1_prefix)
 
 

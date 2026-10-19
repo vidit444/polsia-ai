@@ -22,7 +22,7 @@ async def get_current_user(
         detail="Could not validate credentials",
     )
     try:
-        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.algorithm])
         subject = payload.get("sub")
         if subject is None:
             raise credentials_exception

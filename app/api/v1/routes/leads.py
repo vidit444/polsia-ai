@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, Request, status
 
-from app.api.deps import get_current_user, get_tenant_id
+from app.api.dependencies import get_current_user, get_tenant_id
 from app.db.memory import store
-from app.models.domain import Customer, Lead, User
+from app.models.domain import Customer, Lead
+from app.models.user import User
 from app.schemas.leads import LeadCreateRequest, LeadResponse
 from app.services.audit import record_audit_log
 from app.services.scoring import calculate_lead_score

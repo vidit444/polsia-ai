@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
+from fastapi.concurrency import run_in_threadpool
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
@@ -13,8 +14,16 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
+async def verify_password_async(plain_password: str, hashed_password: str) -> bool:
+    return await run_in_threadpool(verify_password, plain_password, hashed_password)
+
+
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
+
+
+async def get_password_hash_async(password: str) -> str:
+    return await run_in_threadpool(get_password_hash, password)
 
 
 def create_access_token(subject: str, tenant_id: str, role: str) -> str:
