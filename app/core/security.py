@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict
+from typing import Any
 
 from jose import jwt
 from passlib.context import CryptContext
@@ -17,7 +17,11 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def create_access_token(subject: str, claims: Dict[str, Any], expires_minutes: int | None = None) -> str:
+def create_access_token(subject: str, claims: dict[str, Any], expires_minutes: int | None = None) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes or settings.access_token_expire_minutes)
     to_encode = {"sub": subject, "exp": expire, **claims}
     return jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+
+def normalize_email(email: str) -> str:
+    return email.strip().lower()

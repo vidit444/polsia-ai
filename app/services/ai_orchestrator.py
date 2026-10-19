@@ -1,6 +1,5 @@
 from typing import Any
 
-
 SYSTEM_PROMPT = (
     "You are Polsia AI, a tenant-safe enterprise assistant for CRM, workflows, billing, and analytics. "
     "Provide concise, actionable responses with guardrails, avoid unsafe or cross-tenant data disclosure, and suggest next steps."
@@ -13,7 +12,7 @@ def _route_model(model_preference: str | None) -> str:
     return "router:auto"
 
 
-def generate_ai_response(message: str, context: dict[str, Any], model_preference: str | None = None) -> dict[str, Any]:
+async def generate_ai_response(message: str, context: dict[str, Any], model_preference: str | None = None) -> dict[str, Any]:
     routed_model = _route_model(model_preference)
     normalized = message.strip()
     summary_bits = []

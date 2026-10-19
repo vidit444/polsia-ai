@@ -4,6 +4,7 @@ from pydantic import BaseModel, EmailStr
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+    mfa_token: str | None = None
 
 
 class TokenResponse(BaseModel):

@@ -1,4 +1,4 @@
-from fastapi import Depends, Header, HTTPException, Request, status
+from fastapi import Header, HTTPException, Request, status
 from jose import JWTError, jwt
 
 from app.core.config import settings
@@ -15,14 +15,14 @@ async def get_current_user(authorization: str | None = Header(default=None)) -> 
     except JWTError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") from exc
     user_id = payload.get("sub")
-    user = store.get("users", user_id)
+    user = await store.get("users", user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user
 
 
-async def get_tenant_id(request: Request, current_user: User = Depends(get_current_user)) -> str:
-    tenant_id = request.headers.get("X-Tenant-Id", current_user.tenant_id)
+async def get_tenant_id(request: Request, current_user: User = Header(default=None)) -> str:
+    tenant_id = request.headers.get("X-Tenant-Id") or current_user.tenant_id
     if tenant_id != current_user.tenant_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tenant isolation violation")
     return tenant_id

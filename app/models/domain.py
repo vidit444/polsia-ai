@@ -30,10 +30,12 @@ class User(BaseModel):
     role: str
     name: str
     email: EmailStr
+    normalized_email: str
     phone: str | None = None
     mfa_enabled: bool = False
     hashed_password: str
     created_at: datetime = Field(default_factory=utcnow)
+    password_rotation_required: bool = False
 
 
 class Customer(BaseModel):
@@ -115,7 +117,9 @@ class Payment(BaseModel):
     invoice_id: str
     provider: str
     amount: float
+    currency: str = "INR"
     status: str
+    idempotency_key: str
     upi_ref: str | None = None
 
 

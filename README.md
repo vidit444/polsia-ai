@@ -2,24 +2,29 @@
 
 Production-ready FastAPI SaaS backend for Polsia AI.
 
-## Features
-- Multi-tenant API architecture
-- JWT authentication
-- Lead management
-- Workflow execution
-- AI chat orchestration
-- Billing and UPI payment simulation
-- Health, metrics, audit logging, and observability hooks
+## Security changes
+- `.env` removed from source control; use environment variables or `.env.example`
+- `JWT_SECRET`, `DEFAULT_ADMIN_PASSWORD`, and `BILLING_WEBHOOK_SECRET` are mandatory
+- Startup no longer auto-creates privileged admin users
+- Auth now enforces MFA when enabled and applies account/IP lockouts
+- Data is persisted via SQL-backed repositories
+- Rate limiting respects trusted proxies and tenant/user separation
+- Billing callbacks validate signature, idempotency, and invoice values
 
 ## Run
 ```bash
 pip install -r requirements.txt
+export JWT_SECRET="your-secret"
+export DEFAULT_ADMIN_PASSWORD="one-time-password"
+export BILLING_WEBHOOK_SECRET="webhook-secret"
 uvicorn app.main:app --reload
 ```
 
-## Endpoints
-- `POST /v1/auth/login`
-- `POST /v1/leads`
-- `POST /v1/workflows/{id}/run`
-- `POST /v1/ai/chat`
-- `POST /v1/billing/invoices/{id}/pay`
+## One-time admin setup
+Create the initial admin explicitly instead of on application startup:
+```python
+import asyncio
+from app.services.bootstrap import create_initial_admin
+
+asyncio.run(create_initial_admin())
+```
