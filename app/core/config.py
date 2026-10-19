@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import AliasChoices, field_validator
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     redis_url: str
     default_upi_qr_url: str
     cors_origins: list[str]
+    rate_limit_per_minute: int = 60
 
     @field_validator("jwt_secret", "admin_password", "webhook_signing_secret", "openai_api_key", mode="before")
     @classmethod
