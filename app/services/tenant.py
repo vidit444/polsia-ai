@@ -1,4 +1,4 @@
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.audit_log import AuditLog
@@ -13,9 +13,15 @@ class TenantService:
         self.repository = TenantRepository(session)
 
     async def onboard(self, tenant_id: str, payload: TenantOnboardRequest, actor) -> TenantResponse:
+        if getattr(actor, "role", None) != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only platform admins can onboard tenants",
+            )
+
         tenant = await self.repository.get_by_id(tenant_id)
         if tenant is not None:
-            raise HTTPException(status_code=409, detail="Tenant already exists")
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Tenant already exists")
 
         tenant = Tenant(id=tenant_id, name=payload.name, plan=payload.plan, status=payload.status)
         await self.repository.create(tenant)

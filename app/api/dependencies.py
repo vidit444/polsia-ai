@@ -35,9 +35,14 @@ async def get_current_user(
     return user
 
 
-async def get_tenant_id(x_tenant_id: str = Header(..., alias="X-Tenant-ID")) -> str:
+async def get_tenant_id(
+    x_tenant_id: str = Header(..., alias="X-Tenant-ID"),
+    current_user: User = Depends(get_current_user),
+) -> str:
     if not x_tenant_id:
         raise HTTPException(status_code=400, detail="Missing tenant header")
+    if x_tenant_id != str(current_user.tenant_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tenant isolation violation")
     return x_tenant_id
 
 

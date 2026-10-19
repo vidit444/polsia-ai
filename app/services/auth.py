@@ -1,4 +1,5 @@
 from fastapi import HTTPException, status
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -15,7 +16,10 @@ class AuthService:
 
     async def login(self, payload: LoginRequest) -> TokenPair:
         user = await self.user_repository.get_by_email(payload.email)
-        if user is None or not verify_password(payload.password, user.password_hash):
+        is_valid = False
+        if user is not None:
+            is_valid = await run_in_threadpool(verify_password, payload.password, user.password_hash)
+        if user is None or not is_valid:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
         return TokenPair(
