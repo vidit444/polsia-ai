@@ -1,30 +1,40 @@
 # Polsia AI
 
-Production-ready FastAPI SaaS backend for Polsia AI.
+Production-ready FastAPI backend for the Polsia AI multi-tenant SaaS platform.
 
-## Security changes
-- `.env` removed from source control; use environment variables or `.env.example`
-- `JWT_SECRET`, `DEFAULT_ADMIN_PASSWORD`, and `BILLING_WEBHOOK_SECRET` are mandatory
-- Startup no longer auto-creates privileged admin users
-- Auth now enforces MFA when enabled and applies account/IP lockouts
-- Data is persisted via SQL-backed repositories
-- Rate limiting respects trusted proxies and tenant/user separation
-- Billing callbacks validate signature, idempotency, and invoice values
+## Features
+- JWT authentication with tenant-aware RBAC
+- Tenant onboarding and CRM foundations
+- Workflow orchestration with fixed-interval health/debug metadata
+- AI chat gateway abstraction with provider configuration from environment
+- Dashboard analytics endpoints
+- Structured logging, rate limiting, audit logging, and security middleware
+- SQLAlchemy async models, repository/service split, and lifespan-managed startup
+
+## Required Environment Variables
+Secrets must be supplied via environment variables with no insecure defaults.
+
+- `APP_NAME`
+- `APP_ENV`
+- `APP_HOST`
+- `APP_PORT`
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `JWT_ALGORITHM`
+- `ACCESS_TOKEN_EXPIRE_MINUTES`
+- `REFRESH_TOKEN_EXPIRE_MINUTES`
+- `OPENAI_API_KEY`
+- `ANTHROPIC_API_KEY`
+- `AI_DEFAULT_PROVIDER`
+- `RATE_LIMIT_REQUESTS`
+- `RATE_LIMIT_WINDOW_SECONDS`
+- `DEBUG_REVIEW_INTERVAL_SECONDS`
+- `WEBHOOK_SIGNING_SECRET`
+- `UPI_QR_URL`
+- `CORS_ALLOW_ORIGINS`
 
 ## Run
 ```bash
 pip install -r requirements.txt
-export JWT_SECRET="your-secret"
-export DEFAULT_ADMIN_PASSWORD="one-time-password"
-export BILLING_WEBHOOK_SECRET="webhook-secret"
-uvicorn app.main:app --reload
-```
-
-## One-time admin setup
-Create the initial admin explicitly instead of on application startup:
-```python
-import asyncio
-from app.services.bootstrap import create_initial_admin
-
-asyncio.run(create_initial_admin())
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
