@@ -1,14 +1,20 @@
-from pydantic import BaseModel, Field
+from datetime import datetime
+
+from pydantic import BaseModel, EmailStr
 
 
 class TenantOnboardRequest(BaseModel):
-    name: str = Field(min_length=2, max_length=255)
-    plan: str = Field(min_length=2, max_length=100)
-    status: str = Field(min_length=2, max_length=50)
+    company_name: str
+    owner_name: str
+    owner_email: EmailStr
+    plan: str
+    billing_cycle: str
 
 
 class TenantResponse(BaseModel):
-    id: str
+    tenant_id: str
     name: str
-    plan: str
+    tier: str
     status: str
+    owner_email: EmailStr
+    created_at: datetime

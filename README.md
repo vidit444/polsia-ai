@@ -1,38 +1,47 @@
 # Polsia AI
 
-Production-ready FastAPI backend for a multi-tenant AI operations platform.
+Production-ready multi-tenant FastAPI backend for SaaS operations, billing, workflows, CRM, analytics, audit logging, and operational health monitoring.
 
 ## Features
-- Multi-tenant API architecture
-- JWT authentication with RBAC
-- Workflow orchestration APIs
-- KPI analytics APIs
-- Webhook ingestion with signature validation
-- Structured logging, rate limiting, idempotency, and audit trails
-- Health, readiness, and liveness endpoints
+- FastAPI with versioned API routing
+- Multi-tenant data model with tenant-aware services
+- JWT authentication with environment-only secrets
+- SQLAlchemy async-ready ORM models
+- Pydantic settings with strict secret validation
+- Billing invoice creation and payment capture endpoint
+- Workflow execution with audit/event emission
+- Dashboard metrics aggregation
+- Health and smoke-check endpoints for scheduled debugging cadence
+- UPI QR support via configurable invoice metadata
 
-## Quick Start
-1. Create a virtual environment.
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Configure environment variables from `.env.example`.
-4. Run locally:
-   ```bash
-   uvicorn app.main:app --reload
-   ```
+## Required environment variables
+The application refuses to start if required secrets are missing.
 
-## Required Environment Variables
-Secrets are required and are never hardcoded. You must provide:
-- `JWT_SECRET`
-- `ADMIN_PASSWORD`
+- `APP_ENV`
+- `APP_NAME`
+- `API_V1_PREFIX`
 - `DATABASE_URL`
+- `JWT_SECRET`
+- `JWT_ALGORITHM`
+- `JWT_ACCESS_TOKEN_EXPIRE_MINUTES`
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
 - `WEBHOOK_SIGNING_SECRET`
+- `OPENAI_API_KEY`
+- `REDIS_URL`
+- `DEFAULT_UPI_QR_URL`
+- `CORS_ORIGINS`
 
-Optional non-secret settings are documented in `.env.example`.
+## Run
+```bash
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
 
-## Operational Cadence
-- Debugging/monitoring cadence: every 15 minutes in production
-- Daily incident review
-- Weekly schema and performance tuning
+## Notes
+- No secrets are hardcoded.
+- Required package marker files are included:
+  - `app/__init__.py`
+  - `app/api/__init__.py`
+  - `app/api/v1/__init__.py`
+  - `app/api/v1/routes/__init__.py`

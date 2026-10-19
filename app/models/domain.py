@@ -1,134 +1,116 @@
-from __future__ import annotations
+import uuid
+from datetime import UTC, datetime
+from decimal import Decimal
 
-from datetime import datetime, timezone
-from typing import Any
-from uuid import uuid4
+from sqlalchemy import JSON, DateTime, ForeignKey, Numeric, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from pydantic import BaseModel, EmailStr, Field
-
-
-def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+from app.db.base import Base
 
 
-def new_id(prefix: str) -> str:
-    return f"{prefix}_{uuid4().hex[:16]}"
+class Tenant(Base):
+    __tablename__ = "tenants"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    tier: Mapped[str] = mapped_column(String(50), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
+    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
-class Tenant(BaseModel):
-    id: str = Field(default_factory=lambda: new_id("tenant"))
-    name: str
-    plan: str = "growth"
-    status: str = "active"
-    gstin: str | None = None
-    created_at: datetime = Field(default_factory=utcnow)
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
+    role: Mapped[str] = mapped_column(String(50), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
-class User(BaseModel):
-    id: str = Field(default_factory=lambda: new_id("user"))
-    tenant_id: str
-    role: str
-    name: str
-    email: EmailStr
-    normalized_email: str
-    phone: str | None = None
-    mfa_enabled: bool = False
-    hashed_password: str
-    created_at: datetime = Field(default_factory=utcnow)
-    password_rotation_required: bool = False
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id"), nullable=False, index=True)
+    plan: Mapped[str] = mapped_column(String(50), nullable=False)
+    mrr: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    billing_cycle: Mapped[str] = mapped_column(String(50), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False)
+    renewal_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
-class Customer(BaseModel):
-    id: str = Field(default_factory=lambda: new_id("cust"))
-    tenant_id: str
-    name: str
-    industry: str | None = None
-    source: str | None = None
-    lifecycle_stage: str = "lead"
+class Invoice(Base):
+    __tablename__ = "invoices"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id"), nullable=False, index=True)
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), nullable=False, default="INR")
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
+    due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    upi_qr_url: Mapped[str] = mapped_column(Text, nullable=False)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
-class Lead(BaseModel):
-    id: str = Field(default_factory=lambda: new_id("lead"))
-    tenant_id: str
-    customer_id: str
-    owner_id: str
-    status: str = "new"
-    score: int = 0
-    next_action_at: datetime | None = None
-    created_at: datetime = Field(default_factory=utcnow)
+class Lead(Base):
+    __tablename__ = "leads"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id"), nullable=False, index=True)
+    source: Mapped[str] = mapped_column(String(100), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    company: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    score: Mapped[int] = mapped_column(nullable=False, default=0)
+    stage: Mapped[str] = mapped_column(String(50), nullable=False, default="new")
+    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
 
 
-class Workflow(BaseModel):
-    id: str = Field(default_factory=lambda: new_id("wf"))
-    tenant_id: str
-    name: str
-    trigger_type: str
-    config_json: dict[str, Any]
-    enabled: bool = True
+class Workflow(Base):
+    __tablename__ = "workflows"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    type: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
+    config_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
 
 
-class WorkflowRun(BaseModel):
-    id: str = Field(default_factory=lambda: new_id("wfr"))
-    workflow_id: str
-    status: str
-    input_json: dict[str, Any]
-    output_json: dict[str, Any]
-    started_at: datetime = Field(default_factory=utcnow)
+class WorkflowRun(Base):
+    __tablename__ = "workflow_runs"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    workflow_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("workflows.id"), nullable=False, index=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id"), nullable=False, index=True)
+    input_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+    output_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False)
+    duration_ms: Mapped[int] = mapped_column(nullable=False, default=0)
 
 
-class AIAgent(BaseModel):
-    id: str = Field(default_factory=lambda: new_id("agent"))
-    tenant_id: str
-    name: str
-    model: str
-    prompt_version: str
-    safety_policy: str
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id"), nullable=False, index=True)
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
+    action: Mapped[str] = mapped_column(String(255), nullable=False)
+    entity_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    entity_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
-class Conversation(BaseModel):
-    id: str = Field(default_factory=lambda: new_id("conv"))
-    tenant_id: str
-    channel: str
-    external_ref: str | None = None
-    status: str = "active"
+class Event(Base):
+    __tablename__ = "events"
 
-
-class Message(BaseModel):
-    id: str = Field(default_factory=lambda: new_id("msg"))
-    conversation_id: str
-    sender_type: str
-    content: str
-    tokens: int = 0
-    metadata_json: dict[str, Any] = Field(default_factory=dict)
-
-
-class Invoice(BaseModel):
-    id: str = Field(default_factory=lambda: new_id("inv"))
-    tenant_id: str
-    amount: float
-    currency: str = "INR"
-    status: str = "pending"
-    due_date: datetime | None = None
-    payment_ref: str | None = None
-
-
-class Payment(BaseModel):
-    id: str = Field(default_factory=lambda: new_id("pay"))
-    invoice_id: str
-    provider: str
-    amount: float
-    currency: str = "INR"
-    status: str
-    idempotency_key: str
-    upi_ref: str | None = None
-
-
-class AuditLog(BaseModel):
-    id: str = Field(default_factory=lambda: new_id("audit"))
-    tenant_id: str
-    actor_id: str | None = None
-    action: str
-    entity_type: str
-    entity_id: str
-    ip: str | None = None
-    created_at: datetime = Field(default_factory=utcnow)
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id"), nullable=False, index=True)
+    type: Mapped[str] = mapped_column(String(100), nullable=False)
+    payload_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
