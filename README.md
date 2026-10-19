@@ -1,40 +1,38 @@
 # Polsia AI
 
-Production-ready FastAPI backend for the Polsia AI multi-tenant SaaS platform.
+Production-ready FastAPI backend for a multi-tenant AI operations platform.
 
 ## Features
-- JWT authentication with tenant-aware RBAC
-- Tenant onboarding and CRM foundations
-- Workflow orchestration with fixed-interval health/debug metadata
-- AI chat gateway abstraction with provider configuration from environment
-- Dashboard analytics endpoints
-- Structured logging, rate limiting, audit logging, and security middleware
-- SQLAlchemy async models, repository/service split, and lifespan-managed startup
+- Multi-tenant API architecture
+- JWT authentication with RBAC
+- Workflow orchestration APIs
+- KPI analytics APIs
+- Webhook ingestion with signature validation
+- Structured logging, rate limiting, idempotency, and audit trails
+- Health, readiness, and liveness endpoints
+
+## Quick Start
+1. Create a virtual environment.
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Configure environment variables from `.env.example`.
+4. Run locally:
+   ```bash
+   uvicorn app.main:app --reload
+   ```
 
 ## Required Environment Variables
-Secrets must be supplied via environment variables with no insecure defaults.
-
-- `APP_NAME`
-- `APP_ENV`
-- `APP_HOST`
-- `APP_PORT`
-- `DATABASE_URL`
+Secrets are required and are never hardcoded. You must provide:
 - `JWT_SECRET`
-- `JWT_ALGORITHM`
-- `ACCESS_TOKEN_EXPIRE_MINUTES`
-- `REFRESH_TOKEN_EXPIRE_MINUTES`
-- `OPENAI_API_KEY`
-- `ANTHROPIC_API_KEY`
-- `AI_DEFAULT_PROVIDER`
-- `RATE_LIMIT_REQUESTS`
-- `RATE_LIMIT_WINDOW_SECONDS`
-- `DEBUG_REVIEW_INTERVAL_SECONDS`
+- `ADMIN_PASSWORD`
+- `DATABASE_URL`
 - `WEBHOOK_SIGNING_SECRET`
-- `UPI_QR_URL`
-- `CORS_ALLOW_ORIGINS`
 
-## Run
-```bash
-pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
+Optional non-secret settings are documented in `.env.example`.
+
+## Operational Cadence
+- Debugging/monitoring cadence: every 15 minutes in production
+- Daily incident review
+- Weekly schema and performance tuning

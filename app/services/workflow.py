@@ -1,49 +1,38 @@
-from fastapi import HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
-from app.models.audit_log import AuditLog
 from app.models.workflow import Workflow
-from app.repositories.tenant import TenantRepository
-from app.repositories.workflow import WorkflowRepository
-from app.schemas.workflow import WorkflowCreateRequest, WorkflowResponse
+from app.models.workflow_run import WorkflowRun
+from app.schemas.workflow import WorkflowCreate, WorkflowRunCreate
 
 
 class WorkflowService:
-    def __init__(self, session: AsyncSession) -> None:
-        self.session = session
-        self.workflow_repository = WorkflowRepository(session)
-        self.tenant_repository = TenantRepository(session)
-
-    async def create_workflow(self, payload: WorkflowCreateRequest, actor) -> WorkflowResponse:
-        tenant = await self.tenant_repository.get_by_id(payload.tenant_id)
-        if tenant is None:
-            raise HTTPException(status_code=404, detail="Tenant not found")
-        if str(actor.tenant_id) != payload.tenant_id and actor.role not in {"admin", "owner"}:
-            raise HTTPException(status_code=403, detail="Tenant scope violation")
-
+    def create_workflow(self, db: Session, tenant_id: str, payload: WorkflowCreate) -> Workflow:
         workflow = Workflow(
-            tenant_id=payload.tenant_id,
+            tenant_id=tenant_id,
             name=payload.name,
-            trigger_type=payload.trigger_type,
-            config_json=payload.config_json,
-            active=payload.active,
+            type=payload.type,
+            is_active=payload.is_active,
+            version=payload.version,
         )
-        await self.workflow_repository.create(workflow)
-        self.session.add(
-            AuditLog(
-                tenant_id=workflow.tenant_id,
-                actor_user_id=actor.id,
-                action="workflow.create",
-                entity="workflow",
-                metadata_json={"trigger_type": workflow.trigger_type, "active": workflow.active},
-            )
+        db.add(workflow)
+        db.commit()
+        db.refresh(workflow)
+        return workflow
+
+    def run_workflow(self, db: Session, workflow_id: str, payload: WorkflowRunCreate) -> WorkflowRun:
+        workflow = db.get(Workflow, workflow_id)
+        if not workflow:
+            raise ValueError("Workflow not found")
+
+        run_count = db.execute(select(func.count(WorkflowRun.id)).where(WorkflowRun.workflow_id == workflow_id)).scalar_one()
+        workflow_run = WorkflowRun(
+            workflow_id=workflow_id,
+            status="success",
+            input_json=payload.input_json,
+            output_json={"message": "Workflow executed", "run_sequence": run_count + 1},
         )
-        await self.session.commit()
-        return WorkflowResponse(
-            id=str(workflow.id),
-            tenant_id=str(workflow.tenant_id),
-            name=workflow.name,
-            trigger_type=workflow.trigger_type,
-            config_json=workflow.config_json,
-            active=workflow.active,
-        )
+        db.add(workflow_run)
+        db.commit()
+        db.refresh(workflow_run)
+        return workflow_run

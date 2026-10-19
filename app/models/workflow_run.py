@@ -1,20 +1,20 @@
-import uuid
 from datetime import datetime
+from uuid import uuid4
 
-from sqlalchemy import DateTime, ForeignKey, JSON, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, UUIDTimestampMixin
+from app.db.base import Base
 
 
-class WorkflowRun(UUIDTimestampMixin, Base):
+class WorkflowRun(Base):
     __tablename__ = "workflow_runs"
 
-    workflow_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("workflows.id"), nullable=False)
-    status: Mapped[str] = mapped_column(String(100), nullable=False)
-    input_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
-    output_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    workflow_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("workflows.id"), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False)
+    input_json: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    output_json: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -4,18 +4,27 @@ import sys
 import structlog
 
 
-def configure_logging(environment: str) -> None:
-    processors = [
+def configure_logging(log_level: str) -> None:
+    timestamper = structlog.processors.TimeStamper(fmt="iso")
+    shared_processors = [
         structlog.contextvars.merge_contextvars,
-        structlog.processors.add_log_level,
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.dict_tracebacks,
-        structlog.processors.JSONRenderer(),
+        structlog.stdlib.add_log_level,
+        timestamper,
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
     ]
 
     logging.basicConfig(
-        level=logging.DEBUG if environment.lower() == "development" else logging.INFO,
         format="%(message)s",
         stream=sys.stdout,
+        level=getattr(logging, log_level.upper(), logging.INFO),
     )
-    structlog.configure(processors=processors)
+
+    structlog.configure(
+        processors=shared_processors + [
+            structlog.processors.JSONRenderer(),
+        ],
+        wrapper_class=structlog.stdlib.BoundLogger,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=True,
+    )

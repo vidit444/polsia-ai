@@ -1,9 +1,11 @@
 from pydantic import BaseModel
 
 
-class DashboardAnalyticsResponse(BaseModel):
+class KPIResponse(BaseModel):
     tenant_id: str
-    customers: int
-    deals: int
-    workflows: int
-    workflow_runs_by_status: dict[str, int]
+    total_workflows: int
+    active_workflows: int
+    total_runs: int
+    successful_runs: int
+    failed_runs: int
+    open_tasks: int

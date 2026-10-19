@@ -1,18 +1,17 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends, HTTPException
 
-from app.api.dependencies import get_current_user, get_tenant_id
-from app.db.session import get_db_session
-from app.schemas.analytics import DashboardAnalyticsResponse
+from app.api.deps import get_current_user
+from app.db.session import get_db
+from app.schemas.analytics import KPIResponse
 from app.services.analytics import AnalyticsService
 
-router = APIRouter()
+router = APIRouter(prefix="/tenants/{tenant_id}/analytics")
+service = AnalyticsService()
 
 
-@router.get("/dashboard", response_model=DashboardAnalyticsResponse)
-async def dashboard(
-    tenant_id: str = Depends(get_tenant_id),
-    session: AsyncSession = Depends(get_db_session),
-    current_user=Depends(get_current_user),
-) -> DashboardAnalyticsResponse:
-    return await AnalyticsService(session).dashboard(tenant_id, current_user)
+@router.get("/kpis", response_model=KPIResponse)
+async def get_kpis(tenant_id: str, db=Depends(get_db), user: dict = Depends(get_current_user)) -> KPIResponse:
+    if user.get("tenant_id") != tenant_id:
+        raise HTTPException(status_code=403, detail="Tenant access denied")
+    result = service.get_kpis(db, tenant_id)
+    return KPIResponse(**result)

@@ -1,34 +1,26 @@
-from fastapi import HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
-from app.repositories.customer import CustomerRepository
-from app.repositories.deal import DealRepository
-from app.repositories.workflow import WorkflowRepository
-from app.repositories.workflow_run import WorkflowRunRepository
-from app.schemas.analytics import DashboardAnalyticsResponse
+from app.models.task import Task
+from app.models.workflow import Workflow
+from app.models.workflow_run import WorkflowRun
 
 
 class AnalyticsService:
-    def __init__(self, session: AsyncSession) -> None:
-        self.session = session
-        self.customer_repository = CustomerRepository(session)
-        self.deal_repository = DealRepository(session)
-        self.workflow_repository = WorkflowRepository(session)
-        self.workflow_run_repository = WorkflowRunRepository(session)
-
-    async def dashboard(self, tenant_id: str, actor) -> DashboardAnalyticsResponse:
-        if actor.tenant_id and str(actor.tenant_id) != tenant_id and actor.role not in {"admin", "owner"}:
-            raise HTTPException(status_code=403, detail="Tenant scope violation")
-
-        customers = await self.customer_repository.count_by_tenant(tenant_id)
-        deals = await self.deal_repository.count_by_tenant(tenant_id)
-        workflows = await self.workflow_repository.list_by_tenant(tenant_id)
-        workflow_status_counts = await self.workflow_run_repository.count_by_status([workflow.id for workflow in workflows])
-
-        return DashboardAnalyticsResponse(
-            tenant_id=tenant_id,
-            customers=customers,
-            deals=deals,
-            workflows=len(workflows),
-            workflow_runs_by_status=workflow_status_counts,
-        )
+    def get_kpis(self, db: Session, tenant_id: str) -> dict:
+        total_workflows = db.execute(select(func.count(Workflow.id)).where(Workflow.tenant_id == tenant_id)).scalar_one()
+        active_workflows = db.execute(select(func.count(Workflow.id)).where(Workflow.tenant_id == tenant_id, Workflow.is_active.is_(True))).scalar_one()
+        workflow_ids_subquery = select(Workflow.id).where(Workflow.tenant_id == tenant_id)
+        total_runs = db.execute(select(func.count(WorkflowRun.id)).where(WorkflowRun.workflow_id.in_(workflow_ids_subquery))).scalar_one()
+        successful_runs = db.execute(select(func.count(WorkflowRun.id)).where(WorkflowRun.workflow_id.in_(workflow_ids_subquery), WorkflowRun.status == "success")).scalar_one()
+        failed_runs = db.execute(select(func.count(WorkflowRun.id)).where(WorkflowRun.workflow_id.in_(workflow_ids_subquery), WorkflowRun.status == "failed")).scalar_one()
+        open_tasks = db.execute(select(func.count(Task.id)).where(Task.tenant_id == tenant_id, Task.status != "completed")).scalar_one()
+        return {
+            "tenant_id": tenant_id,
+            "total_workflows": total_workflows,
+            "active_workflows": active_workflows,
+            "total_runs": total_runs,
+            "successful_runs": successful_runs,
+            "failed_runs": failed_runs,
+            "open_tasks": open_tasks,
+        }
